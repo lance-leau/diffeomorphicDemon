@@ -2,22 +2,22 @@
 #include "mex.h"
 #include "tools.h"
 
-void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     if (nrhs < 2)
         mexErrMsgTxt("Usage: [warped, field] = diffeoDemon(fixed, moving)");
     if (nlhs > 2)
         mexErrMsgTxt("Too many output arguments.");
 
-    Image* fixed = parseMatlabToImage(prhs[0]);
-    Image* moving = parseMatlabToImage(prhs[1]);
+    Image *fixed = parseMatlabToImage(prhs[0]);
+    Image *moving = parseMatlabToImage(prhs[1]);
 
     normalizeImage(fixed);
     normalizeImage(moving);
 
-    DispField* df = initDispField(fixed->width, fixed->height);
+    DispField *df = initDispField(fixed->width, fixed->height);
 
-    // demonsRegistration(fixed, moving, df, 16, 4, 20, 1.0f);
+    demonsRegistration(fixed, moving, df, 16, 4, 20, 1.0f);
 
     // Image* warped = warpImage(moving, df);
 
