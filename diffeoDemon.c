@@ -17,9 +17,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     DispField *df = initDispField(fixed->width, fixed->height);
 
+    mexPrintf("Fixed: %dx%d | Moving: %dx%d\n", fixed->width, fixed->height,
+              moving->width, moving->height);
     demonsRegistration(fixed, moving, df, 16, 4, 20, 1.0f);
 
-    // Image* warped = warpImage(moving, df);
+    mexPrintf("Registration done, warping image...\n");
+    Image *warped = warpImage(moving, df);
 
     // TODO free the everything
     // TODO parse fixed and moving to matlab compatible structs and return

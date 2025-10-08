@@ -4,8 +4,8 @@
 #include "demon.h"
 #include "mex.h"
 
-Image* parseMatlabToImage(const mxArray* arr);
-mxArray* parseImageToMatlab(const mxArray* arr);
-mxArray* parseDispFieldToMatlab(const mxArray* arr);
+Image *parseMatlabToImage(const mxArray *arr);
+mxArray *parseImageToMatlab(const Image *img);
+mxArray *parseDispFieldToMatlab(const DispField *df);
 
 #endif // TOOLS_H

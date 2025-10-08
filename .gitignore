@@ -17,3 +17,6 @@ __pycache__/
 *.tiff
 *.svg
 .vscode/
+.clang-format
+*.mexw64
+*.mexw64.pdb
