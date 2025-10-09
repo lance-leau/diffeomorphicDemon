@@ -47,11 +47,16 @@ void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
 void smoothDispField(DispField *df, float sigma);
 
 // Warping
-Image *warpImage(Image *moving, DispField *df);
+void warpImage(Image *moving, DispField *df);
 
 // Iteration
 void demonsRegistration(Image *fixed, Image *moving, DispField *df,
-                        int blockSize, int searchRadius, int nIterations,
-                        float smoothSigma);
+                        int numLevels, int numIters, float sigmaI,
+                        float sigmaX);
+
+DispVect interpolateDispField(DispField *df, int x, int y);
+
+void freeImage(Image *img);
+void freeDispField(DispField *df);
 
 #endif // DEMON_H

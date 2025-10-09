@@ -25,10 +25,10 @@ void normalizeImage(Image *img)
 DispField *initDispField(int width, int height)
 {
     DispField *df = calloc(1, sizeof(DispField));
-    df->width = width;
-    df->height = height;
-    df->x = calloc(width * height, sizeof(float));
-    df->y = calloc(width * height, sizeof(float));
+    df->width = (width + 2) / 3;
+    df->height = (height + 2) / 3;
+    df->x = calloc(df->width * df->height, sizeof(float));
+    df->y = calloc(df->width * df->height, sizeof(float));
     return df;
 }
 
@@ -60,7 +60,26 @@ DispVect interpolateDispField(DispField *df, int x, int y)
     return (DispVect){ .x = u, .y = v };
 }
 
-Image *warpImage(Image *moving, DispField *df)
+void freeImage(Image *img)
+{
+    if (img)
+    {
+        free(img->data);
+        free(img);
+    }
+}
+
+void freeDispField(DispField *df)
+{
+    if (df)
+    {
+        free(df->x);
+        free(df->y);
+        free(df);
+    }
+}
+
+void warpImage(Image *moving, DispField *df)
 {
     Image *warped = calloc(1, sizeof(Image));
     warped->width = moving->width;
@@ -90,8 +109,9 @@ Image *warpImage(Image *moving, DispField *df)
         }
     }
 
-    // TODO free warped
-    return warped;
+    free(moving->data);
+    moving->data = warped->data;
+    free(warped);
 }
 
 // TODO maybe switch from square kernel to circular kernel (maybe gaussian ???)
@@ -128,11 +148,12 @@ float compareBlockSSD(Image *fixed, Image *moving, int fixedX, int fixedY,
 void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
                         int blockSize, int searchRadius)
 {
-    for (int mY = 0; mY < moving->height; mY += 3)
+    for (int gy = 0; gy < df->height; ++gy)
     {
-        for (int mX = 0; mX < moving->width; mX += 3)
+        int mY = gy * 3;
+        for (int gx = 0; gx < df->width; ++gx)
         {
-            printf("block (%d, %d)\n", mX, mY);
+            int mX = gx * 3;
             float currBestSSD = -1.0f;
             for (int dy = -searchRadius; dy <= searchRadius; dy++)
             {
@@ -150,8 +171,9 @@ void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
                     if (currBestSSD == -1 || ssd < currBestSSD)
                     {
                         currBestSSD = ssd;
-                        df->x[(mY / 3) * df->width + (mX / 3)] = (float)dx;
-                        df->y[(mY / 3) * df->width + (mX / 3)] = (float)dy;
+                        int idx = gy * df->width + gx;
+                        df->x[idx] = (float)dx;
+                        df->y[idx] = (float)dy;
                     }
                 }
             }
@@ -163,12 +185,11 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *df,
                         int numLevels, int numIters, float sigmaI, float sigmaX)
 {
     // TODO blur and normalize
-    for (int iter = 0; iter < 1; iter++)
+    for (int iter = 0; iter < numIters; iter++)
     {
-        estimateBlockDisps(fixed, moving, df, 3, 3);
-        Image *warped = warpImage(moving, df);
-        moving = warped;
-
+        printf("Starting iteration %d/%d\n", iter + 1, numIters);
+        estimateBlockDisps(fixed, moving, df, 32, 5);
+        warpImage(moving, df);
         // TODO free warped
     }
 }
