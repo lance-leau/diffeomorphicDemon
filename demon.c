@@ -1,6 +1,8 @@
 
 #include "demon.h"
 
+#include <float.h>
+
 #include "tools.h"
 
 void normalizeImage(Image *img)
@@ -99,37 +101,57 @@ void freeDispField(DispField *df)
     free(df);
 }
 
-void warpImage(Image *moving, DispField *df)
+Image *warpImage(Image *moving, DispField *df)
 {
+    int W = moving->width;
+    int H = moving->height;
+
     Image *warped = calloc(1, sizeof(Image));
-    warped->width = moving->width;
-    warped->height = moving->height;
-    warped->data = calloc(warped->width * warped->height, sizeof(float));
+    warped->width = W;
+    warped->height = H;
+    warped->data = calloc(W * H, sizeof(float));
 
-    for (int y = 0; y < moving->height; y++)
+    for (int y = 0; y < H; ++y)
     {
-        for (int x = 0; x < moving->width; x++)
+        for (int x = 0; x < W; ++x)
         {
-            int srcX = x + (int)vect.x;
-            int srcY = y + (int)vect.y;
+            // Read displacement at this pixel
+            float dx = df->x[y * W + x];
+            float dy = df->y[y * W + x];
 
+            // Backward mapping: find source position
+            float srcX = x - dx;
+            float srcY = y - dy;
+
+            // Clamp coordinates
             if (srcX < 0)
                 srcX = 0;
-            if (srcX >= moving->width)
-                srcX = moving->width - 1;
             if (srcY < 0)
                 srcY = 0;
-            if (srcY >= moving->height)
-                srcY = moving->height - 1;
+            if (srcX > W - 2)
+                srcX = W - 2;
+            if (srcY > H - 2)
+                srcY = H - 2;
 
-            warped->data[y * warped->width + x] =
-                moving->data[srcY * moving->width + srcX];
+            // Bilinear interpolation
+            int x0 = (int)srcX;
+            int y0 = (int)srcY;
+            float wx = srcX - x0;
+            float wy = srcY - y0;
+
+            float I00 = moving->data[y0 * W + x0];
+            float I10 = moving->data[y0 * W + (x0 + 1)];
+            float I01 = moving->data[(y0 + 1) * W + x0];
+            float I11 = moving->data[(y0 + 1) * W + (x0 + 1)];
+
+            float val = (1 - wx) * (1 - wy) * I00 + wx * (1 - wy) * I10
+                + (1 - wx) * wy * I01 + wx * wy * I11;
+
+            warped->data[y * W + x] = val;
         }
     }
 
-    free(moving->data);
-    moving->data = warped->data;
-    free(warped);
+    return warped;
 }
 
 // TODO maybe switch from square kernel to circular kernel (maybe gaussian ???)
@@ -186,8 +208,9 @@ void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
                     int movingX = fixedX + dx;
                     int movingY = fixedY + dy;
 
-                    float ssd = compareBlockSSD(fixed, moving, fixedX, fixedY,
-                                                movingX, movingY, df->stepSize);
+                    float ssd =
+                        compareBlockSSD(fixed, moving, fixedX, fixedY, movingX,
+                                        movingY, df->stepSize / 2);
                     if (ssd < minSSD)
                     {
                         minSSD = ssd;
@@ -201,39 +224,58 @@ void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
             df->y[gy * df->width + gx] += bestDy;
         }
     }
+    interpolateDispField(df);
 }
 
-void demonsRegistration(Image *fixed, Image *moving, DispField *df,
-                        int numLevels, int numIters, float sigmaI, float sigmaX)
+Image *copyImage(Image *src)
+{
+    Image *ret = calloc(1, sizeof(Image));
+    ret->width = src->width;
+    ret->height = src->height;
+    ret->data = calloc(src->height * src->width, sizeof(float));
+
+    for (int i = 0; i < src->height * src->width; i++)
+        ret->data[i] = src->data[i];
+
+    return ret;
+}
+
+void sumDispFields(DispField *D_tot, DispField *D_iter)
+{
+    int N = D_tot->width * D_tot->height;
+    for (int i = 0; i < N; i++)
+    {
+        D_tot->x[i] += D_iter->x[i];
+        D_tot->y[i] += D_iter->y[i];
+    }
+}
+
+void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
+                        int numIters)
 {
     // TODO blur and normalize
+    Image *moving_i = copyImage(moving);
     for (int iter = 0; iter < numIters; iter++)
     {
         printf("Starting iteration %d/%d\n", iter + 1, numIters);
         fflush(stdout);
-        // TODO maybe add a pyramid lvl step size like in matlab
-        estimateBlockDisps(fixed, moving, df, df->stepSize, 5);
-        warpImage(moving, df);
-        // TODO free warped
+
+        printf("estimating displacements...");
+        fflush(stdout);
+
+        DispField *D_iter =
+            initDispField(fixed->width, fixed->height, D_tot->stepSize);
+        estimateBlockDisps(fixed, moving_i, D_iter, 10);
+
+        printf("done!\n");
+        fflush(stdout);
+
+        Image *newMoving = warpImage(moving_i, D_iter);
+        freeImage(moving_i);
+        moving_i = newMoving;
+
+        sumDispFields(D_tot, D_iter);
+        freeDispField(D_iter);
     }
+    freeImage(moving_i);
 }
-
-/*
-D_total = zeros(W, H);
-M_warped = copy(M);
-
-for iter in range(numIters):
-
-    // (a) Compute incremental field
-    dD = estimateDisplacement(F, M_warped);
-
-    // (b) Smooth for regularization
-    gaussianSmooth(dD, sigmaX);
-
-    // (c) Accumulate
-    addFields(D_total, dD);
-
-    // (d) Warp the original image (or incrementally)
-    M_warped = warp(M, D_total);
-end
-*/
