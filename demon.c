@@ -22,51 +22,71 @@ void normalizeImage(Image *img)
     }
 }
 
-DispField *initDispField(int width, int height)
+DispField *initDispField(int width, int height, int stepSize)
 {
     DispField *df = calloc(1, sizeof(DispField));
-    df->width = (width + 2) / 3;
-    df->height = (height + 2) / 3;
+    df->width = width;
+    df->height = height;
     df->x = calloc(df->width * df->height, sizeof(float));
     df->y = calloc(df->width * df->height, sizeof(float));
+    df->stepSize = stepSize;
     return df;
 }
 
-DispVect interpolateDispField(DispField *df, int x, int y)
+void interpolateDispField(DispField *df)
 {
-    int gx = x / 3;
-    int gy = y / 3;
-    if (gx >= df->width - 1)
-        gx = df->width - 2;
-    if (gy >= df->height - 1)
-        gy = df->height - 2;
+    int W = df->width;
+    int H = df->height;
+    int s = df->stepSize;
 
-    float fx = (x % 3) / 3.0f;
-    float fy = (y % 3) / 3.0f;
+    for (int y = 0; y < H; ++y)
+    {
+        int y0 = (y / s) * s;
+        int y1 = y0 + s;
+        if (y1 >= H)
+            y1 = H - 1;
 
-    float u00 = df->x[gy * df->width + gx];
-    float v00 = df->y[gy * df->width + gx];
-    float u01 = df->x[gy * df->width + (gx + 1)];
-    float v01 = df->y[gy * df->width + (gx + 1)];
-    float u10 = df->x[(gy + 1) * df->width + gx];
-    float v10 = df->y[(gy + 1) * df->width + gx];
-    float u11 = df->x[(gy + 1) * df->width + (gx + 1)];
-    float v11 = df->y[(gy + 1) * df->width + (gx + 1)];
+        float fy0 = (float)(y - y0) / (float)(y1 - y0);
+        float fy1 = 1.0f - fy0;
 
-    float u = (1 - fx) * (1 - fy) * u00 + fx * (1 - fy) * u10
-        + (1 - fx) * fy * u01 + fx * fy * u11;
-    float v = (1 - fx) * (1 - fy) * v00 + fx * (1 - fy) * v10
-        + (1 - fx) * fy * v01 + fx * fy * v11;
-    return (DispVect){ .x = u, .y = v };
+        for (int x = 0; x < W; ++x)
+        {
+            int x0 = (x / s) * s;
+            int x1 = x0 + s;
+            if (x1 >= W)
+                x1 = W - 1;
+            float fx0 = (float)(x - x0) / (float)(x1 - x0);
+            float fx1 = 1.0f - fx0;
+
+            float u00 = df->x[y0 * W + x0];
+            float v00 = df->y[y0 * W + x0];
+
+            float u10 = df->x[y0 * W + x1];
+            float v10 = df->y[y0 * W + x1];
+
+            float u01 = df->x[y1 * W + x0];
+            float v01 = df->y[y1 * W + x0];
+
+            float u11 = df->x[y1 * W + x1];
+            float v11 = df->y[y1 * W + x1];
+
+            float u = (fx1 * fy1 * u00) + (fx0 * fy1 * u10) + (fx1 * fy0 * u01)
+                + (fx0 * fy0 * u11);
+
+            float v = (fx1 * fy1 * v00) + (fx0 * fy1 * v10) + (fx1 * fy0 * v01)
+                + (fx0 * fy0 * v11);
+
+            df->x[y * W + x] = u;
+            df->y[y * W + x] = v;
+        }
+    }
 }
 
 void freeImage(Image *img)
 {
     if (img)
-    {
         free(img->data);
-        free(img);
-    }
+    free(img);
 }
 
 void freeDispField(DispField *df)
@@ -75,8 +95,8 @@ void freeDispField(DispField *df)
     {
         free(df->x);
         free(df->y);
-        free(df);
     }
+    free(df);
 }
 
 void warpImage(Image *moving, DispField *df)
@@ -90,8 +110,6 @@ void warpImage(Image *moving, DispField *df)
     {
         for (int x = 0; x < moving->width; x++)
         {
-            DispVect vect = interpolateDispField(df, x, y);
-
             int srcX = x + (int)vect.x;
             int srcY = y + (int)vect.y;
 
@@ -146,37 +164,41 @@ float compareBlockSSD(Image *fixed, Image *moving, int fixedX, int fixedY,
 }
 
 void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
-                        int blockSize, int searchRadius)
+                        int searchRadius)
 {
-    for (int gy = 0; gy < df->height; ++gy)
+    int step = df->stepSize;
+
+    for (int gy = 0; gy < df->height; gy += step)
     {
-        int mY = gy * 3;
-        for (int gx = 0; gx < df->width; ++gx)
+        for (int gx = 0; gx < df->width; gx += step)
         {
-            int mX = gx * 3;
-            float currBestSSD = -1.0f;
+            int fixedX = gx;
+            int fixedY = gy;
+
+            float minSSD = FLT_MAX; // const max flaot in std lib
+            int bestDx = 0;
+            int bestDy = 0;
+
             for (int dy = -searchRadius; dy <= searchRadius; dy++)
             {
                 for (int dx = -searchRadius; dx <= searchRadius; dx++)
                 {
-                    int fX = mX + dx;
-                    int fY = mY + dy;
+                    int movingX = fixedX + dx;
+                    int movingY = fixedY + dy;
 
-                    if (fX < 0 || fY < 0 || fX >= fixed->width
-                        || fY >= fixed->height)
-                        continue;
-
-                    float ssd = compareBlockSSD(fixed, moving, fX, fY, mX, mY,
-                                                blockSize);
-                    if (currBestSSD == -1 || ssd < currBestSSD)
+                    float ssd = compareBlockSSD(fixed, moving, fixedX, fixedY,
+                                                movingX, movingY, df->stepSize);
+                    if (ssd < minSSD)
                     {
-                        currBestSSD = ssd;
-                        int idx = gy * df->width + gx;
-                        df->x[idx] = (float)dx;
-                        df->y[idx] = (float)dy;
+                        minSSD = ssd;
+                        bestDx = dx;
+                        bestDy = dy;
                     }
                 }
             }
+
+            df->x[gy * df->width + gx] += bestDx;
+            df->y[gy * df->width + gx] += bestDy;
         }
     }
 }
@@ -188,25 +210,30 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *df,
     for (int iter = 0; iter < numIters; iter++)
     {
         printf("Starting iteration %d/%d\n", iter + 1, numIters);
-        estimateBlockDisps(fixed, moving, df, 32, 5);
+        fflush(stdout);
+        // TODO maybe add a pyramid lvl step size like in matlab
+        estimateBlockDisps(fixed, moving, df, df->stepSize, 5);
         warpImage(moving, df);
         // TODO free warped
     }
 }
 
 /*
-function demonsRegistration(fixed, moving, df, numLevels, numIters, sigmaI,
-sigmaX): for iteration in [0 .. numIters-1]: # 1. Estimate local block
-displacements for each grid cell (gx, gy): bestDisp =
-findDisplacementBySSD(fixed, moving, gx, gy, searchRadius) df.x[gx, gy] =
-bestDisp.x df.y[gx, gy] = bestDisp.y
+D_total = zeros(W, H);
+M_warped = copy(M);
 
-        # 2. Smooth / regularize the displacement field
-        smoothDispField(df, sigmaX)
+for iter in range(numIters):
 
-        # 3. Warp moving image
-        moving = warpImage(originalMoving, df)
-    end
+    // (a) Compute incremental field
+    dD = estimateDisplacement(F, M_warped);
 
-    return df
+    // (b) Smooth for regularization
+    gaussianSmooth(dD, sigmaX);
+
+    // (c) Accumulate
+    addFields(D_total, dD);
+
+    // (d) Warp the original image (or incrementally)
+    M_warped = warp(M, D_total);
+end
 */

@@ -19,7 +19,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     mexPrintf("Fixed: %dx%d | Moving: %dx%d\n", fixed->width, fixed->height,
               moving->width, moving->height);
-    demonsRegistration(fixed, moving, df, 16, 10, 20, 1.0f);
+    demonsRegistration(fixed, moving, df, 16, 5, 20, 1.0f);
 
     mexPrintf("Registration done, warping image...\n");
     warpImage(moving, df);
