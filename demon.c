@@ -220,8 +220,8 @@ void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
                 }
             }
 
-            df->x[gy * df->width + gx] += bestDx;
-            df->y[gy * df->width + gx] += bestDy;
+            df->x[gy * df->width + gx] -= bestDx;
+            df->y[gy * df->width + gx] -= bestDy;
         }
     }
     interpolateDispField(df);
@@ -245,9 +245,46 @@ void sumDispFields(DispField *D_tot, DispField *D_iter)
     int N = D_tot->width * D_tot->height;
     for (int i = 0; i < N; i++)
     {
-        D_tot->x[i] += D_iter->x[i];
-        D_tot->y[i] += D_iter->y[i];
+        D_tot->x[i] *= D_iter->x[i];
+        D_tot->y[i] *= D_iter->y[i];
     }
+}
+
+void matrixMultiplication(DispField *D_tot, DispField *D_iter)
+{
+    int H = D_tot->height;
+    int W = D_iter->width;
+    int N = D_tot->width; // shared dimension
+
+    // Result buffers
+    float *newX = calloc(H * W, sizeof(float));
+    float *newY = calloc(H * W, sizeof(float));
+
+    for (int i = 0; i < H; i++)
+    {
+        for (int j = 0; j < W; j++)
+        {
+            float sumX = 0.0f;
+            float sumY = 0.0f;
+            for (int k = 0; k < N; k++)
+            {
+                sumX += D_tot->x[i * N + k] * D_iter->x[k * W + j];
+                sumY += D_tot->y[i * N + k] * D_iter->y[k * W + j];
+            }
+            newX[i * W + j] = sumX;
+            newY[i * W + j] = sumY;
+        }
+    }
+
+    // Store result back in D_tot
+    free(D_tot->x);
+    free(D_tot->y);
+    D_tot->x = newX;
+    D_tot->y = newY;
+
+    // Update new width/height
+    D_tot->width = W;
+    D_tot->height = H;
 }
 
 void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
@@ -274,8 +311,10 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
         freeImage(moving_i);
         moving_i = newMoving;
 
-        sumDispFields(D_tot, D_iter);
+        matrixMultiplication(D_tot, D_iter);
         freeDispField(D_iter);
     }
-    freeImage(moving_i);
+    free(moving->data);
+    moving->data = moving_i->data;
+    free(moving_i);
 }

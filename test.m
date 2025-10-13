@@ -4,8 +4,6 @@ I2 = mat2gray(imread("1.png"));
 I1 = imresize(I1, [512, 512]);
 I2 = imresize(I2, [512, 512]);
 
-nIterations = 1;
-
 [D, morphed] = diffeoDemon(I1, I2);
 
 figure; imshow(morphed, []);
