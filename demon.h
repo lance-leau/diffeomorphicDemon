@@ -40,7 +40,7 @@ float compareBlockSSD(Image *fixed, Image *moving, int fixedX, int fixedY,
 
 // Disp estimation
 void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
-                        int blockSize, int searchRadius);
+                        int searchRadius);
 
 // Warping
 Image *warpImage(Image *moving, DispField *df);

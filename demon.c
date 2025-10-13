@@ -242,11 +242,47 @@ Image *copyImage(Image *src)
 
 void sumDispFields(DispField *D_tot, DispField *D_iter)
 {
-    int N = D_tot->width * D_tot->height;
-    for (int i = 0; i < N; i++)
+    int W = D_tot->width;
+    int H = D_tot->height;
+
+    float *newX = calloc(W * H, sizeof(float));
+    float *newY = calloc(W * H, sizeof(float));
+
+    for (int y = 0; y < H; y++)
     {
-        D_tot->x[i] *= D_iter->x[i];
-        D_tot->y[i] *= D_iter->y[i];
+        for (int x = 0; x < W; x++)
+        {
+            int cur = y * W + x;
+
+            int a = x - (int)(D_iter->x[cur]);
+            int b = y - (int)(D_iter->y[cur]);
+
+            if (a < 0)
+                a = 0;
+            if (a >= W)
+                a = W - 1;
+            if (b < 0)
+                b = 0;
+            if (b >= H)
+                b = H - 1;
+
+            newX[cur] = D_iter->x[cur] + D_tot->x[b * W + a];
+            newY[cur] = D_iter->y[cur] + D_tot->y[b * W + a];
+        }
+    }
+
+    memcpy(D_tot->x, newX, W * H * sizeof(float));
+    memcpy(D_tot->y, newY, W * H * sizeof(float));
+    free(newX);
+    free(newY);
+}
+
+void sumDispFields_legacy(DispField *D_tot, DispField *D_iter)
+{
+    for (int i = 0; i < D_tot->height * D_tot->width; i++)
+    {
+        D_tot->x[i] -= D_iter->x[i];
+        D_tot->y[i] -= D_iter->y[i];
     }
 }
 
@@ -311,7 +347,7 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
         freeImage(moving_i);
         moving_i = newMoving;
 
-        matrixMultiplication(D_tot, D_iter);
+        sumDispFields(D_tot, D_iter);
         freeDispField(D_iter);
     }
     free(moving->data);

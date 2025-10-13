@@ -1,3 +1,4 @@
+tic;
 I1 = mat2gray(imread("0.png"));
 I2 = mat2gray(imread("1.png"));
 
@@ -11,4 +12,5 @@ figure; imshow(sqrt(D(:, :, 1) .^ 2 + D(:, :, 2) .^ 2), []);
 figure; imshowpair(I2, morphed);
 figure; imshowpair(morphed, imwarp(I2, D));
 figure; imshow(morphed, []);
+disp(toc);
 disp("breakpoint here");
