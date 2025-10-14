@@ -1,0 +1,16 @@
+If:
+  PathMatch: '.*\.c'
+
+CompileFlags:
+  Add: [
+      -x, c,
+      -std=c11,
+
+      -Wall,
+      -Wextra,
+      -Wconversion,
+
+      -Wno-c++-compat,
+      -Wno-declaration-after-statement,
+      -Wno-unsafe-buffer-usage
+    ]

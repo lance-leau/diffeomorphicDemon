@@ -32,4 +32,7 @@ mxArray *parseImageToMatlab(const Image *img);
 mxArray *parseDispFieldToMatlab(const DispField *df);
 DispField *upsampleDispFieldToFull(const DispField *coarse, int W, int H);
 
+size_t clampSizetDiff(size_t a, size_t b);
+size_t safeSizetIntAddition(size_t a, int b);
+
 #endif // TOOLS_H

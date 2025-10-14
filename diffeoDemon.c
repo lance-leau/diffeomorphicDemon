@@ -5,10 +5,18 @@
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     if (nrhs < 2)
+    {
         mexErrMsgTxt("Usage: [warped, field] = diffeoDemon(fixed, moving)");
-    if (nlhs > 2)
-        mexErrMsgTxt("Too many output arguments.");
+        return;
+    }
 
+    if (nlhs > 2)
+    {
+        mexErrMsgTxt("Too many output arguments.");
+        return;
+    }
+
+    // The index is check on top of the function, and is safe
     Image *fixed = parseMatlabToImage(prhs[0]);
     Image *moving = parseMatlabToImage(prhs[1]);
 
@@ -27,6 +35,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     // TODO free the everything
     // TODO parse fixed and moving to matlab compatible structs and return
 
+    // The index is check on top of the function, and is safe
     plhs[0] = parseDispFieldToMatlab(df);
     plhs[1] = parseImageToMatlab(moving);
 

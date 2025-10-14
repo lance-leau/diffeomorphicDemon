@@ -2,6 +2,9 @@
 
 #include <float.h>
 #include <math.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "tools.h"
@@ -11,7 +14,7 @@ void normalizeImage(Image *img)
     float minVal = img->data[0];
     float maxVal = img->data[0];
 
-    for (int i = 1; i < img->width * img->height; i++)
+    for (size_t i = 1; i < img->width * img->height; i++)
     {
         if (img->data[i] < minVal)
             minVal = img->data[i];
@@ -19,13 +22,13 @@ void normalizeImage(Image *img)
             maxVal = img->data[i];
     }
 
-    for (int i = 0; i < img->width * img->height; i++)
+    for (size_t i = 0; i < img->width * img->height; i++)
     {
         img->data[i] = (img->data[i] - minVal) / (maxVal - minVal);
     }
 }
 
-DispField *initDispField(int width, int height, int stepSize)
+DispField *initDispField(size_t width, size_t height, size_t stepSize)
 {
     DispField *df = calloc(1, sizeof(DispField));
     df->width = width;
@@ -38,26 +41,29 @@ DispField *initDispField(int width, int height, int stepSize)
 
 void interpolateDispField(DispField *df)
 {
-    int W = df->width;
-    int H = df->height;
-    int s = df->stepSize;
+    size_t W = df->width;
+    size_t H = df->height;
+    size_t s = df->stepSize;
 
-    for (int y = 0; y < H; ++y)
+    for (size_t y = 0; y < H; ++y)
     {
-        int y0 = (y / s) * s;
-        int y1 = y0 + s;
+        size_t y0 = (y / s) * s;
+        size_t y1 = y0 + s;
+
         if (y1 >= H)
             y1 = H - 1;
 
         float fy0 = (float)(y - y0) / (float)(y1 - y0);
         float fy1 = 1.0f - fy0;
 
-        for (int x = 0; x < W; ++x)
+        for (size_t x = 0; x < W; ++x)
         {
-            int x0 = (x / s) * s;
-            int x1 = x0 + s;
+            size_t x0 = (x / s) * s;
+            size_t x1 = x0 + s;
+
             if (x1 >= W)
                 x1 = W - 1;
+
             float fx0 = (float)(x - x0) / (float)(x1 - x0);
             float fx1 = 1.0f - fx0;
 
@@ -104,41 +110,42 @@ void freeDispField(DispField *df)
 
 Image *warpImage(Image *moving, DispField *df)
 {
-    int W = moving->width;
-    int H = moving->height;
+    size_t W = moving->width;
+    size_t H = moving->height;
 
     Image *warped = calloc(1, sizeof(Image));
     warped->width = W;
     warped->height = H;
     warped->data = calloc(W * H, sizeof(float));
 
-    for (int y = 0; y < H; ++y)
+    for (size_t y = 0; y < H; ++y)
     {
-        for (int x = 0; x < W; ++x)
+        for (size_t x = 0; x < W; ++x)
         {
             // Read displacement at this pixel
             float dx = df->x[y * W + x];
             float dy = df->y[y * W + x];
 
             // Backward mapping: find source position
-            float srcX = x - dx;
-            float srcY = y - dy;
+            // TODO: Need more overflow checking
+            float srcX = (float)x - dx;
+            float srcY = (float)y - dy;
 
             // Clamp coordinates
             if (srcX < 0)
                 srcX = 0;
             if (srcY < 0)
                 srcY = 0;
-            if (srcX > W - 2)
-                srcX = W - 2;
-            if (srcY > H - 2)
-                srcY = H - 2;
+            if (srcX > (float)W - 2)
+                srcX = (float)(W - 2);
+            if (srcY > (float)H - 2)
+                srcY = (float)(H - 2);
 
             // Bilinear interpolation
-            int x0 = (int)srcX;
-            int y0 = (int)srcY;
-            float wx = srcX - x0;
-            float wy = srcY - y0;
+            size_t x0 = (size_t)srcX;
+            size_t y0 = (size_t)srcY;
+            float wx = srcX - (float)x0;
+            float wy = srcY - (float)y0;
 
             float I00 = moving->data[y0 * W + x0];
             float I10 = moving->data[y0 * W + (x0 + 1)];
@@ -156,29 +163,35 @@ Image *warpImage(Image *moving, DispField *df)
 }
 
 // TODO maybe switch from square kernel to circular kernel (maybe gaussian ???)
-float compareBlockSSD(Image *fixed, Image *moving, int fixedX, int fixedY,
-                      int movingX, int movingY, int blockSize)
+float compareBlockSSD(Image *fixed, Image *moving, size_t fixedX, size_t fixedY,
+                      size_t movingX, size_t movingY, size_t blockSize)
 {
-    int rad = blockSize / 2;
+    int rad = (int)(blockSize / 2);
     float ssd = 0.0f;
 
-    for (int j = -rad; j <= rad; j++)
+    for (long long j = -rad; j <= rad; j++)
     {
-        for (int i = -rad; i <= rad; i++)
+        for (long long i = -rad; i <= rad; i++)
         {
-            int fx = fixedX + i;
-            int fy = fixedY + j;
-            int mx = movingX + i;
-            int my = movingY + j;
+            long long fx = (long long)fixedX + i;
+            long long fy = (long long)fixedY + j;
+            long long mx = (long long)movingX + i;
+            long long my = (long long)movingY + j;
 
             // skip if out of bounds
-            if (fx < 0 || fy < 0 || fx >= fixed->width || fy >= fixed->height)
-                continue;
-            if (mx < 0 || my < 0 || mx >= moving->width || my >= moving->height)
+            if (fx < 0 || fy < 0 || (size_t)fx >= fixed->width
+                || (size_t)fy >= fixed->height)
                 continue;
 
-            float diff = fixed->data[fy * fixed->width + fx]
-                - moving->data[my * moving->width + mx];
+            if (mx < 0 || my < 0 || (size_t)mx >= moving->width
+                || (size_t)my >= moving->height)
+                continue;
+
+            size_t fixed_pos = (size_t)fy * fixed->width + (size_t)fx;
+            size_t moving_pos = (size_t)my * moving->width + (size_t)mx;
+
+            float diff = fixed->data[fixed_pos] - moving->data[moving_pos];
+
             ssd += diff * diff;
         }
     }
@@ -189,16 +202,16 @@ float compareBlockSSD(Image *fixed, Image *moving, int fixedX, int fixedY,
 void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
                         int searchRadius)
 {
-    int step = df->stepSize;
+    size_t step = df->stepSize;
 
-    for (int gy = 0; gy < df->height; gy += step)
+    for (size_t gy = 0; gy < df->height; gy += step)
     {
-        for (int gx = 0; gx < df->width; gx += step)
+        for (size_t gx = 0; gx < df->width; gx += step)
         {
-            int fixedX = gx;
-            int fixedY = gy;
+            size_t fixedX = gx;
+            size_t fixedY = gy;
 
-            float minSSD = FLT_MAX; // const max flaot in std lib
+            float minSSD = FLT_MAX; // const max float in std lib
             int bestDx = 0;
             int bestDy = 0;
 
@@ -206,8 +219,8 @@ void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
             {
                 for (int dx = -searchRadius; dx <= searchRadius; dx++)
                 {
-                    int movingX = fixedX + dx;
-                    int movingY = fixedY + dy;
+                    size_t movingX = safeSizetIntAddition(fixedX, dx);
+                    size_t movingY = safeSizetIntAddition(fixedY, dy);
 
                     float ssd = compareBlockSSD(fixed, moving, fixedX, fixedY,
                                                 movingX, movingY, BLOCK_SIZE);
@@ -220,49 +233,45 @@ void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
                 }
             }
 
-            df->x[gy * df->width + gx] -= bestDx;
-            df->y[gy * df->width + gx] -= bestDy;
+            df->x[gy * df->width + gx] -= (float)bestDx;
+            df->y[gy * df->width + gx] -= (float)bestDy;
         }
     }
     interpolateDispField(df);
 }
 
-Image *copyImage(Image *src)
+static Image *copyImage(Image *src)
 {
     Image *ret = calloc(1, sizeof(Image));
     ret->width = src->width;
     ret->height = src->height;
     ret->data = calloc(src->height * src->width, sizeof(float));
 
-    for (int i = 0; i < src->height * src->width; i++)
+    for (size_t i = 0; i < src->height * src->width; i++)
         ret->data[i] = src->data[i];
 
     return ret;
 }
 
-void sumDispFields(DispField *D_tot, DispField *D_iter) {
-    int W = D_tot->width;
-    int H = D_tot->height;
+static void sumDispFields(DispField *D_tot, DispField *D_iter)
+{
+    size_t W = D_tot->width;
+    size_t H = D_tot->height;
 
     float *newX = calloc(W * H, sizeof(float));
     float *newY = calloc(W * H, sizeof(float));
 
-
-    for (int y = 0; y < H; y++)
+    for (size_t y = 0; y < H; y++)
     {
-        for (int x = 0; x < W; x++)
+        for (size_t x = 0; x < W; x++)
         {
-            int cur = y * W + x;
+            size_t cur = y * W + x;
 
-            int a = x - (int)(D_iter->x[cur]);
-            int b = y - (int)(D_iter->y[cur]);
+            size_t a = clampSizetDiff(x, (size_t)(D_iter->x[cur]));
+            size_t b = clampSizetDiff(y, (size_t)(D_iter->y[cur]));
 
-            if (a < 0)
-                a = 0;
             if (a >= W)
                 a = W - 1;
-            if (b < 0)
-                b = 0;
             if (b >= H)
                 b = H - 1;
 
@@ -278,51 +287,51 @@ void sumDispFields(DispField *D_tot, DispField *D_iter) {
     free(newY);
 }
 
-void sumDispFields_legacy(DispField *D_tot, DispField *D_iter)
-{
-    for (int i = 0; i < D_tot->height * D_tot->width; i++)
-    {
-        D_tot->x[i] -= D_iter->x[i];
-        D_tot->y[i] -= D_iter->y[i];
-    }
-}
+// static void sumDispFields_legacy(DispField *D_tot, DispField *D_iter)
+// {
+//     for (size_t i = 0; i < D_tot->height * D_tot->width; i++)
+//     {
+//         D_tot->x[i] -= D_iter->x[i];
+//         D_tot->y[i] -= D_iter->y[i];
+//     }
+// }
 
-void matrixMultiplication(DispField *D_tot, DispField *D_iter)
-{
-    int H = D_tot->height;
-    int W = D_iter->width;
-    int N = D_tot->width; // shared dimension
+// static void matrixMultiplication(DispField *D_tot, DispField *D_iter)
+// {
+//     size_t H = D_tot->height;
+//     size_t W = D_iter->width;
+//     size_t N = D_tot->width; // shared dimension
 
-    // Result buffers
-    float *newX = calloc(H * W, sizeof(float));
-    float *newY = calloc(H * W, sizeof(float));
+//     // Result buffers
+//     float *newX = calloc(H * W, sizeof(float));
+//     float *newY = calloc(H * W, sizeof(float));
 
-    for (int i = 0; i < H; i++)
-    {
-        for (int j = 0; j < W; j++)
-        {
-            float sumX = 0.0f;
-            float sumY = 0.0f;
-            for (int k = 0; k < N; k++)
-            {
-                sumX += D_tot->x[i * N + k] * D_iter->x[k * W + j];
-                sumY += D_tot->y[i * N + k] * D_iter->y[k * W + j];
-            }
-            newX[i * W + j] = sumX;
-            newY[i * W + j] = sumY;
-        }
-    }
+//     for (size_t i = 0; i < H; i++)
+//     {
+//         for (size_t j = 0; j < W; j++)
+//         {
+//             float sumX = 0.0f;
+//             float sumY = 0.0f;
+//             for (size_t k = 0; k < N; k++)
+//             {
+//                 sumX += D_tot->x[i * N + k] * D_iter->x[k * W + j];
+//                 sumY += D_tot->y[i * N + k] * D_iter->y[k * W + j];
+//             }
+//             newX[i * W + j] = sumX;
+//             newY[i * W + j] = sumY;
+//         }
+//     }
 
-    // Store result back in D_tot
-    free(D_tot->x);
-    free(D_tot->y);
-    D_tot->x = newX;
-    D_tot->y = newY;
+//     // Store result back in D_tot
+//     free(D_tot->x);
+//     free(D_tot->y);
+//     D_tot->x = newX;
+//     D_tot->y = newY;
 
-    // Update new width/height
-    D_tot->width = W;
-    D_tot->height = H;
-}
+//     // Update new width/height
+//     D_tot->width = W;
+//     D_tot->height = H;
+// }
 
 void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
                         int numIters)
@@ -351,7 +360,7 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
         sumDispFields(D_tot, D_iter);
         freeDispField(D_iter);
     }
-    Image* test = copyImage(moving);
+    Image *test = copyImage(moving);
     saveImagePGM(warpImage(test, D_tot), "MORPHED.pgm");
     free(moving->data);
     moving->data = moving_i->data;
@@ -361,7 +370,8 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
 void saveImagePGM(const Image *img, const char *filename)
 {
     FILE *fp = fopen(filename, "wb"); // 'wb' for "write binary"
-    if (!fp) {
+    if (!fp)
+    {
         printf("Error: Could not open file %s for writing.\n", filename);
         return;
     }
@@ -370,22 +380,27 @@ void saveImagePGM(const Image *img, const char *filename)
     // P5 is the magic number for binary grayscale
     // Width Height
     // Maxval
-    fprintf(fp, "P5\n%d %d\n255\n", img->width, img->height);
+    fprintf(fp, "P5\n%d %d\n255\n", (int)img->width, (int)img->height);
 
-    int numPixels = img->width * img->height;
-    unsigned char *buffer = (unsigned char *)malloc(numPixels * sizeof(unsigned char));
+    size_t numPixels = img->width * img->height;
+    unsigned char *buffer =
+        (unsigned char *)malloc(numPixels * sizeof(unsigned char));
 
-    if (!buffer) {
+    if (!buffer)
+    {
         printf("Error: Could not allocate memory for image buffer.\n");
         fclose(fp);
         return;
     }
 
     // Convert float data [0, 1] to unsigned char [0, 255]
-    for (int i = 0; i < numPixels; i++) {
+    for (size_t i = 0; i < numPixels; i++)
+    {
         float val = img->data[i];
-        if (val < 0.0f) val = 0.0f;
-        if (val > 1.0f) val = 1.0f;
+        if (val < 0.0f)
+            val = 0.0f;
+        if (val > 1.0f)
+            val = 1.0f;
         buffer[i] = (unsigned char)(val * 255.0f);
     }
 

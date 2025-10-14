@@ -1,5 +1,7 @@
 #include "tools.h"
 
+#include <stddef.h>
+
 Image *parseMatlabToImage(const mxArray *arr)
 {
     if (!mxIsNumeric(arr) || mxIsComplex(arr))
@@ -15,8 +17,8 @@ Image *parseMatlabToImage(const mxArray *arr)
 
     /* Create Image struct */
     Image *img = calloc(1, sizeof(Image));
-    img->width = (int)cols;
-    img->height = (int)rows;
+    img->width = (size_t)cols;
+    img->height = (size_t)rows;
     img->data = (float *)calloc(numel, sizeof(float));
 
     /* Copy data depending on MATLAB input type */
@@ -79,4 +81,31 @@ mxArray *parseDispFieldToMatlab(const DispField *df)
         dst[i + N] = -(double)df->x[i];
     }
     return out;
+}
+
+// Performs a - b
+// @return size_t   0       if a - b < 0
+//                  a - b   else
+size_t clampSizetDiff(size_t a, size_t b)
+{
+    if (a < b)
+        return 0;
+
+    return a - b;
+}
+
+size_t safeSizetIntAddition(size_t a, int b)
+{
+    if (b >= 0)
+    {
+        if ((size_t)b > SIZE_MAX - a)
+            return SIZE_MAX; // Overflow
+    }
+    else
+    {
+        if ((size_t)-b > a)
+            return 0; // Underflow
+    }
+
+    return a + (size_t)b;
 }
