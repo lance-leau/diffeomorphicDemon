@@ -20,3 +20,4 @@ __pycache__/
 .clang-format
 *.mexw64
 *.mexw64.pdb
+*.pgm

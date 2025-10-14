@@ -241,16 +241,12 @@ Image *copyImage(Image *src)
     return ret;
 }
 
-#define TEST_PIXEL 250
-
-void sumDispFields(DispField *D_tot, const DispField *D_iter) {
+void sumDispFields(DispField *D_tot, DispField *D_iter) {
     int W = D_tot->width;
     int H = D_tot->height;
 
     float *newX = calloc(W * H, sizeof(float));
     float *newY = calloc(W * H, sizeof(float));
-
-    printf("(%f, %f) | (%f, %f)\n", D_tot->x[TEST_PIXEL + TEST_PIXEL * D_tot->width], D_tot->y[TEST_PIXEL + TEST_PIXEL * D_tot->width], D_iter->x[TEST_PIXEL + TEST_PIXEL * D_tot->width], D_iter->y[TEST_PIXEL + TEST_PIXEL * D_tot->width]);
 
 
     for (int y = 0; y < H; y++)
@@ -259,8 +255,8 @@ void sumDispFields(DispField *D_tot, const DispField *D_iter) {
         {
             int cur = y * W + x;
 
-            int a = x + (int)(D_tot->x[cur]);
-            int b = y + (int)(D_tot->y[cur]);
+            int a = x - (int)(D_iter->x[cur]);
+            int b = y - (int)(D_iter->y[cur]);
 
             if (a < 0)
                 a = 0;
@@ -271,23 +267,13 @@ void sumDispFields(DispField *D_tot, const DispField *D_iter) {
             if (b >= H)
                 b = H - 1;
 
-            newX[cur] = D_iter->x[b * W + a] + D_tot->x[cur];
-            newY[cur] = D_iter->y[b * W + a] + D_tot->y[cur];
-
-            if (x == TEST_PIXEL && y == TEST_PIXEL) {
-                printf("a, b = (%i, %i)\n", a, b);
-                printf("D_tot = (%f, %f)\n", D_tot->x[cur], D_tot->y[cur]);
-                printf("D_iter = (%f, %f)\n", D_iter->x[cur], D_iter->y[cur]);
-                printf("D_iter_shift = (%f, %f)\n", D_iter->x[b * W + a], D_iter->y[b * W + a]);
-                printf("newX, newY = (%f, %f)\n", newX[cur], newY[cur]);
-            }
+            newX[cur] = D_iter->x[cur] + D_tot->x[b * W + a];
+            newY[cur] = D_iter->y[cur] + D_tot->y[b * W + a];
         }
     }
 
     memcpy(D_tot->x, newX, W * H * sizeof(float));
     memcpy(D_tot->y, newY, W * H * sizeof(float));
-
-    printf(" => (%f, %f)\n================\n", D_tot->x[TEST_PIXEL + TEST_PIXEL * D_tot->width], D_tot->y[TEST_PIXEL + TEST_PIXEL * D_tot->width]);
 
     free(newX);
     free(newY);
