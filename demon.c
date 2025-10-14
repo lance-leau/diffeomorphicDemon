@@ -267,8 +267,8 @@ static void sumDispFields(DispField *D_tot, DispField *D_iter)
         {
             size_t cur = y * W + x;
 
-            size_t a = clampSizetDiff(x, (size_t)(D_iter->x[cur]));
-            size_t b = clampSizetDiff(y, (size_t)(D_iter->y[cur]));
+            size_t a = safeSizetIntAddition(x, (int)(D_iter->x[cur]));
+            size_t b = safeSizetIntAddition(y, (int)(D_iter->y[cur]));
 
             if (a >= W)
                 a = W - 1;

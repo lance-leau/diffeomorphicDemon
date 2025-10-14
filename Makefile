@@ -11,7 +11,7 @@ HEADERS     = 	demon.h \
 			    tools.h
 
 MEX_FLAGS   =   -g -O
-STRICT_WARNINGS = COMPFLAGS="$(COMPFLAGS)"
+STRICT_WARNINGS = COMPFLAGS="$(COMPFLAGS) /W4 /WX"
 
 OUTPUT_FILE =   $(TARGET).mexw64
 
