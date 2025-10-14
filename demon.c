@@ -1,4 +1,3 @@
-
 #include "demon.h"
 
 #include <float.h>
@@ -396,6 +395,4 @@ void saveImagePGM(const Image *img, const char *filename)
     // Cleanup
     fclose(fp);
     free(buffer);
-    printf("IMAGE SAVED");
-
 }

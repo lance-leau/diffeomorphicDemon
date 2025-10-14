@@ -1,4 +1,5 @@
 __pycache__/
+.cache
 *.py[cod]
 *.so
 *.pyd
@@ -21,3 +22,5 @@ __pycache__/
 *.mexw64
 *.mexw64.pdb
 *.pgm
+
+compile_commands.json
