@@ -208,9 +208,8 @@ void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
                     int movingX = fixedX + dx;
                     int movingY = fixedY + dy;
 
-                    float ssd =
-                        compareBlockSSD(fixed, moving, fixedX, fixedY, movingX,
-                                        movingY, df->stepSize / 2);
+                    float ssd = compareBlockSSD(fixed, moving, fixedX, fixedY,
+                                                movingX, movingY, BLOCK_SIZE);
                     if (ssd < minSSD)
                     {
                         minSSD = ssd;
@@ -338,7 +337,7 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
 
         DispField *D_iter =
             initDispField(fixed->width, fixed->height, D_tot->stepSize);
-        estimateBlockDisps(fixed, moving_i, D_iter, 10);
+        estimateBlockDisps(fixed, moving_i, D_iter, SEARCH_RADIUS);
 
         printf("done!\n");
         fflush(stdout);

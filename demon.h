@@ -4,6 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define STEP_SIZE 5
+#define BLOCK_SIZE 5
+#define SEARCH_RADIUS 10
+#define NUM_ITERS 10
+
 typedef struct
 {
     int width;

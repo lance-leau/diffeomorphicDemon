@@ -75,9 +75,8 @@ mxArray *parseDispFieldToMatlab(const DispField *df)
     mwSize N = df->width * df->height;
     for (mwSize i = 0; i < N; i++)
     {
-        dst[i] = (double)df->x[i]; // Ux
-        dst[i + N] = (double)df->y[i]; // Uy
+        dst[i] = -(double)df->y[i];
+        dst[i + N] = -(double)df->x[i];
     }
-
     return out;
 }

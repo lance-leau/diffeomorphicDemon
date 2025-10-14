@@ -6,11 +6,11 @@ I1 = imresize(I1, [512, 512]);
 I2 = imresize(I2, [512, 512]);
 
 [D, morphed] = diffeoDemon(I1, I2);
+warped = imwarp(I2, D, 'interp', 'linear');
 
-figure; imshow(morphed, []);
-figure; imshow(sqrt(D(:, :, 1) .^ 2 + D(:, :, 2) .^ 2), []);
-figure; imshowpair(I2, morphed);
-figure; imshowpair(morphed, imwarp(I2, D));
-figure; imshow(morphed, []);
-disp(toc);
-disp("breakpoint here");
+
+figure;
+tiledlayout(1,3);
+nexttile; imshow(I1, []); title('I1 (Reference)');
+nexttile; imshow(morphed, []); title('MEX Warped');
+nexttile; imshow(warped, []); title('imwarp Warped');
