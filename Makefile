@@ -10,7 +10,7 @@ SRC 	    = 	diffeoDemon.c \
 HEADERS     = 	demon.h \
 			    tools.h
 
-MEX_FLAGS   =   -g -O
+MEX_FLAGS   =   -g -O -silent
 STRICT_WARNINGS = COMPFLAGS="$(COMPFLAGS) /W4 /WX"
 
 OUTPUT_FILE =   $(TARGET).mexw64
@@ -27,4 +27,4 @@ remake:
 clean:
 	$(RM) $(OUTPUT_FILE) $(OUTPUT_FILE).pdb
 
-.PHONY: all clean
+.PHONY: all clean remake
