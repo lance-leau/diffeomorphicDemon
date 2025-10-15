@@ -56,6 +56,8 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *df,
 
 void interpolateDispField(DispField *df);
 
+void saveImagePGM(const Image *img, const char *filename);
+
 void freeImage(Image *img);
 void freeDispField(DispField *df);
 

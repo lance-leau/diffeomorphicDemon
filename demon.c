@@ -1,7 +1,8 @@
-
 #include "demon.h"
 
 #include <float.h>
+#include <math.h>
+#include <string.h>
 
 #include "tools.h"
 
@@ -239,13 +240,13 @@ Image *copyImage(Image *src)
     return ret;
 }
 
-void sumDispFields(DispField *D_tot, DispField *D_iter)
-{
+void sumDispFields(DispField *D_tot, DispField *D_iter) {
     int W = D_tot->width;
     int H = D_tot->height;
 
     float *newX = calloc(W * H, sizeof(float));
     float *newY = calloc(W * H, sizeof(float));
+
 
     for (int y = 0; y < H; y++)
     {
@@ -272,6 +273,7 @@ void sumDispFields(DispField *D_tot, DispField *D_iter)
 
     memcpy(D_tot->x, newX, W * H * sizeof(float));
     memcpy(D_tot->y, newY, W * H * sizeof(float));
+
     free(newX);
     free(newY);
 }
@@ -349,7 +351,48 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
         sumDispFields(D_tot, D_iter);
         freeDispField(D_iter);
     }
+    Image* test = copyImage(moving);
+    saveImagePGM(warpImage(test, D_tot), "MORPHED.pgm");
     free(moving->data);
     moving->data = moving_i->data;
     free(moving_i);
+}
+
+void saveImagePGM(const Image *img, const char *filename)
+{
+    FILE *fp = fopen(filename, "wb"); // 'wb' for "write binary"
+    if (!fp) {
+        printf("Error: Could not open file %s for writing.\n", filename);
+        return;
+    }
+
+    // Write PGM header
+    // P5 is the magic number for binary grayscale
+    // Width Height
+    // Maxval
+    fprintf(fp, "P5\n%d %d\n255\n", img->width, img->height);
+
+    int numPixels = img->width * img->height;
+    unsigned char *buffer = (unsigned char *)malloc(numPixels * sizeof(unsigned char));
+
+    if (!buffer) {
+        printf("Error: Could not allocate memory for image buffer.\n");
+        fclose(fp);
+        return;
+    }
+
+    // Convert float data [0, 1] to unsigned char [0, 255]
+    for (int i = 0; i < numPixels; i++) {
+        float val = img->data[i];
+        if (val < 0.0f) val = 0.0f;
+        if (val > 1.0f) val = 1.0f;
+        buffer[i] = (unsigned char)(val * 255.0f);
+    }
+
+    // Write pixel data to file
+    fwrite(buffer, sizeof(unsigned char), numPixels, fp);
+
+    // Cleanup
+    fclose(fp);
+    free(buffer);
 }
