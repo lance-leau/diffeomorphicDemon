@@ -394,14 +394,27 @@ void saveImagePGM(const Image *img, const char *filename)
     }
 
     // Convert float data [0, 1] to unsigned char [0, 255]
-    for (size_t i = 0; i < numPixels; i++)
+    // for (size_t i = 0; i < numPixels; i++)
+    // {
+    //     float val = img->data[i];
+    //     if (val < 0.0f)
+    //         val = 0.0f;
+    //     if (val > 1.0f)
+    //         val = 1.0f;
+    //     buffer[i] = (unsigned char)(val * 255.0f);
+    // }
+
+    for (size_t i = 0; i < img->height; i++)
     {
-        float val = img->data[i];
-        if (val < 0.0f)
-            val = 0.0f;
-        if (val > 1.0f)
-            val = 1.0f;
-        buffer[i] = (unsigned char)(val * 255.0f);
+        for (size_t j = 0; j < img->width; j++)
+        {
+            float val = img->data[i * img->width + j];
+            if (val < 0.0f)
+                val = 0.0f;
+            if (val > 1.0f)
+                val = 1.0f;
+            buffer[j * img->height + i] = (unsigned char)(val * 255.0f);
+        }
     }
 
     // Write pixel data to file

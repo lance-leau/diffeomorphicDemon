@@ -26,5 +26,6 @@ remake:
 
 clean:
 	$(RM) $(OUTPUT_FILE) $(OUTPUT_FILE).pdb
+	$(RM) *.pgm
 
 .PHONY: all clean remake
