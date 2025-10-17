@@ -23,6 +23,13 @@ target_compile_options(diffeoDemon PRIVATE "-g" "-O")
 
 if(MSVC)
     target_compile_options(diffeoDemon PRIVATE "/W4" "/WX")
+else()
+    target_compile_options(diffeoDemon PRIVATE
+        -Wall
+        -Wextra
+        -pedantic
+        -Werror
+    )
 endif()
 
 add_custom_target(clean_pgm
@@ -32,10 +39,11 @@ add_custom_target(clean_pgm
 )
 
 add_custom_target(clean_all
+    COMMAND ${CMAKE_COMMAND} --build . --target clean
+    COMMAND ${CMAKE_COMMAND} --build . --target clean_pgm
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Cleaning all build artifacts and generated files"
 )
-
-add_dependencies(clean_all clean clean_pgm)
 
 add_custom_target(remake
     COMMAND ${CMAKE_COMMAND} --build . --target clean
