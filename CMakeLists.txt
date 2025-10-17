@@ -31,6 +31,12 @@ add_custom_target(clean_pgm
     COMMENT "Removing *.pgm files from the root directory"
 )
 
+add_custom_target(clean_all
+    COMMENT "Cleaning all build artifacts and generated files"
+)
+
+add_dependencies(clean_all clean clean_pgm)
+
 add_custom_target(remake
     COMMAND ${CMAKE_COMMAND} --build . --target clean
     COMMAND ${CMAKE_COMMAND} --build . --target clean_pgm
