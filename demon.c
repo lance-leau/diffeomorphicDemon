@@ -195,6 +195,11 @@ void estimateBlockDisps(Image *fixed, Image *moving, DispField *df,
     {
         for (int gx = 0; gx < df->width; gx += step)
         {
+            // TODO if fixed[x, y] and moving[x, y] are equal, stop warping
+            if (compareBlockSSD(fixed, moving, gx, gy, gx, gy, BLOCK_SIZE)
+                <= 0.0f)
+                continue;
+
             int fixedX = gx;
             int fixedY = gy;
 
@@ -240,13 +245,13 @@ Image *copyImage(Image *src)
     return ret;
 }
 
-void sumDispFields(DispField *D_tot, DispField *D_iter) {
+void sumDispFields(DispField *D_tot, DispField *D_iter)
+{
     int W = D_tot->width;
     int H = D_tot->height;
 
     float *newX = calloc(W * H, sizeof(float));
     float *newY = calloc(W * H, sizeof(float));
-
 
     for (int y = 0; y < H; y++)
     {
@@ -351,7 +356,7 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
         sumDispFields(D_tot, D_iter);
         freeDispField(D_iter);
     }
-    Image* test = copyImage(moving);
+    Image *test = copyImage(moving);
     saveImagePGM(warpImage(test, D_tot), "MORPHED.pgm");
     free(moving->data);
     moving->data = moving_i->data;
@@ -361,7 +366,8 @@ void demonsRegistration(Image *fixed, Image *moving, DispField *D_tot,
 void saveImagePGM(const Image *img, const char *filename)
 {
     FILE *fp = fopen(filename, "wb"); // 'wb' for "write binary"
-    if (!fp) {
+    if (!fp)
+    {
         printf("Error: Could not open file %s for writing.\n", filename);
         return;
     }
@@ -373,19 +379,24 @@ void saveImagePGM(const Image *img, const char *filename)
     fprintf(fp, "P5\n%d %d\n255\n", img->width, img->height);
 
     int numPixels = img->width * img->height;
-    unsigned char *buffer = (unsigned char *)malloc(numPixels * sizeof(unsigned char));
+    unsigned char *buffer =
+        (unsigned char *)malloc(numPixels * sizeof(unsigned char));
 
-    if (!buffer) {
+    if (!buffer)
+    {
         printf("Error: Could not allocate memory for image buffer.\n");
         fclose(fp);
         return;
     }
 
     // Convert float data [0, 1] to unsigned char [0, 255]
-    for (int i = 0; i < numPixels; i++) {
+    for (int i = 0; i < numPixels; i++)
+    {
         float val = img->data[i];
-        if (val < 0.0f) val = 0.0f;
-        if (val > 1.0f) val = 1.0f;
+        if (val < 0.0f)
+            val = 0.0f;
+        if (val > 1.0f)
+            val = 1.0f;
         buffer[i] = (unsigned char)(val * 255.0f);
     }
 

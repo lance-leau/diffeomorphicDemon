@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define STEP_SIZE 5
-#define BLOCK_SIZE 5
+#define STEP_SIZE 15
+#define BLOCK_SIZE 15
 #define SEARCH_RADIUS 10
 #define NUM_ITERS 10
 
