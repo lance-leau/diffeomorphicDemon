@@ -4,6 +4,8 @@ project(DiffeoDemon)
 
 find_package(Matlab REQUIRED)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Set the output to root
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
 
@@ -46,8 +48,7 @@ add_custom_target(clean_all
 )
 
 add_custom_target(remake
-    COMMAND ${CMAKE_COMMAND} --build . --target clean
-    COMMAND ${CMAKE_COMMAND} --build . --target clean_pgm
+    COMMAND ${CMAKE_COMMAND} --build . --target clean_all
     COMMAND ${CMAKE_COMMAND} --build .
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Cleaning all artifacts and then rebuilding the project"
