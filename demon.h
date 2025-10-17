@@ -1,6 +1,9 @@
 #ifndef DEMON_H
 #define DEMON_H
 
+#include <stddef.h>
+
+
 #define STEP_SIZE 5
 #define BLOCK_SIZE 5
 #define SEARCH_RADIUS 10

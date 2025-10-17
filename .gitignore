@@ -18,9 +18,11 @@ __pycache__/
 *.tiff
 *.svg
 .vscode/
-.clang-format
+.idea/
 *.mexw64
 *.mexw64.pdb
 *.pgm
 
 compile_commands.json
+
+build/
