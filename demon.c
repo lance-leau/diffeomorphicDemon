@@ -267,8 +267,8 @@ static void sumDispFields(DispField *D_tot, DispField *D_iter)
         {
             size_t cur = y * W + x;
 
-            size_t a = safeSizetIntAddition(x, (int)(D_iter->x[cur]));
-            size_t b = safeSizetIntAddition(y, (int)(D_iter->y[cur]));
+            size_t a = safeSizetIntAddition(x, -(int)(D_iter->x[cur]));
+            size_t b = safeSizetIntAddition(y, -(int)(D_iter->y[cur]));
 
             if (a >= W)
                 a = W - 1;
@@ -286,44 +286,6 @@ static void sumDispFields(DispField *D_tot, DispField *D_iter)
     free(newX);
     free(newY);
 }
-
-// static void sumDispFields(DispField *D_tot, DispField *D_iter)
-// {
-//     int W = (int)D_tot->width;
-//     int H = (int)D_tot->height;
-
-//     float *newX = calloc((size_t)(W * H), sizeof(float));
-//     float *newY = calloc((size_t)(W * H), sizeof(float));
-
-//     for (int y = 0; y < H; y++)
-//     {
-//         for (int x = 0; x < W; x++)
-//         {
-//             int cur = y * W + x;
-
-//             int a = x - (int)(D_iter->x[cur]);
-//             int b = y - (int)(D_iter->y[cur]);
-
-//             if (a < 0)
-//                 a = 0;
-//             if (a >= W)
-//                 a = W - 1;
-//             if (b < 0)
-//                 b = 0;
-//             if (b >= H)
-//                 b = H - 1;
-
-//             newX[cur] = D_iter->x[cur] + D_tot->x[b * W + a];
-//             newY[cur] = D_iter->y[cur] + D_tot->y[b * W + a];
-//         }
-//     }
-
-//     memcpy(D_tot->x, newX, (size_t)(W * H) * sizeof(float));
-//     memcpy(D_tot->y, newY, (size_t)(W * H) * sizeof(float));
-
-//     free(newX);
-//     free(newY);
-// }
 
 // static void sumDispFields_legacy(DispField *D_tot, DispField *D_iter)
 // {

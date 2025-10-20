@@ -99,12 +99,18 @@ size_t safeSizetIntAddition(size_t a, int b)
     if (b >= 0)
     {
         if ((size_t)b > SIZE_MAX - a)
+        {
+            //printf("[WARN] Overflow happened on addition : %zu + %i\n", a, b);
             return SIZE_MAX; // Overflow
+        }
     }
     else
     {
         if ((size_t)-b > a)
+        {
+            //printf("[WARN] Underflow happened on addition : %zu + %i\n", a, b);
             return 0; // Underflow
+        }
     }
 
     return a + (size_t)b;
