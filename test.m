@@ -35,8 +35,10 @@ warped = imwarp(I2, D, 'interp', 'linear');
 
 % disp(toc);
 % disp("breakpoint here");
+disp(toc);
 
-figure;
+f = figure;
+f.Position = [500, 500,1600, 500];
 tiledlayout(1,3);
 nexttile; imshow(I1, []); title('I1 (Reference)');
 nexttile; imshow(morphed, []); title('MEX Warped');
